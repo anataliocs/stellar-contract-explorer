@@ -1,3 +1,4 @@
+extern crate promkit;
 use std::any::Any;
 use std::char::REPLACEMENT_CHARACTER;
 use std::os::unix::process::CommandExt;
@@ -8,6 +9,7 @@ use promkit::preset::confirm::Confirm;
 use promkit::preset::json::Json;
 use promkit::preset::listbox::Listbox;
 use promkit::preset::readline::Readline;
+use promkit::Prompt;
 use promkit::style::StyleBuilder;
 
 use crate::json_util::json_string;
