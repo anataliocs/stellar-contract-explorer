@@ -5,18 +5,16 @@ use ratatui::{
     widgets::{Block, BorderType, Paragraph},
 };
 use ratatui::layout::{Constraint, Layout};
-use ratatui::prelude::Modifier;
+use ratatui::prelude::{Modifier, Text};
 use ratatui::style::Stylize;
-use ratatui::widgets::{HighlightSpacing, List, ListItem, StatefulWidget, Tabs};
+use ratatui::widgets::{HighlightSpacing, List, ListItem, Tabs};
 use strum::IntoEnumIterator;
 
 use crate::app::{App, ListStates, SelectedTab};
 use crate::app::SelectedTab::{Tab1, Tab2, Tab3, Tab4};
 
-pub mod ui {}
-
 /// Renders the user interface widgets.
-pub fn render(app: &mut App, frame: &mut Frame) {
+pub fn render<'a>(app: &'a mut App, frame: &mut Frame) {
 
     // This is where you add new widgets.
     // See the following resources:
@@ -27,10 +25,15 @@ pub fn render(app: &mut App, frame: &mut Frame) {
         [Constraint::Max(3), Constraint::Max(4), Constraint::Fill(2)])
         .areas(frame.area());
 
-    let titles = SelectedTab::iter().map(SelectedTab::title);
-    let highlight_style = (Color::default(), app.selected_tab.palette().c700);
-    let selected_tab_index = app.selected_tab as usize;
 
+    let [bot_left, bot_right] = Layout::horizontal([
+        Constraint::Fill(2),
+        Constraint::Fill(4)])
+        .areas(bot_area);
+
+    let titles = SelectedTab::iter().map(SelectedTab::title);
+    let highlight_style = (Color::default(), app.selected_tab.palette().c950);
+    let selected_tab_index = app.selected_tab as usize;
 
     frame.render_widget(
         Tabs::new(titles)
@@ -38,7 +41,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
             .select(selected_tab_index)
             .padding(" ", " ")
             .divider(" ")
-            .block(Block::bordered()),
+            .block(Block::bordered().border_type(BorderType::Rounded)),
         tab_area,
     );
 
@@ -53,7 +56,7 @@ pub fn render(app: &mut App, frame: &mut Frame) {
                     .title_style(Style::default().add_modifier(Modifier::BOLD))
                     .border_type(BorderType::Rounded),
             )
-            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
+            .style(Style::default().fg(Color::Yellow).bg(Color::Black))
             .centered(),
         top_area,
     );
@@ -61,40 +64,62 @@ pub fn render(app: &mut App, frame: &mut Frame) {
     frame.render_stateful_widget(
         match app.selected_tab {
             Tab1 => {
-                List::new(
-                    vec![ListItem::new("Item 1"),
-                         ListItem::new("Item 2")]
-                ).bg(Color::DarkGray)
-                 .highlight_style(
-                     Style::default()
-                         .bg(Color::Yellow)
-                         .add_modifier(Modifier::BOLD))
-                 .highlight_symbol(">")
-                 .highlight_spacing(HighlightSpacing::Always)
-                 .block(Block::bordered().title("Extend TTL Scripts"))
+                list_factory(vec![ListItem::new("Extend Instance TTL"),
+                                  ListItem::new("Extend Persistence TTL"),
+                                  ListItem::new("Extend Temporary TTL"),
+                                  ListItem::new("Generate Data Key"),
+                ], "Extend TTL Scripts")
             }
             Tab2 => {
-                List::new(["item1", "item2"])
-                    .highlight_style(Style::default())
-                    .highlight_symbol(">")
-                    .highlight_spacing(HighlightSpacing::Always)
-                    .block(Block::bordered())
+                list_factory(vec![ListItem::new("Restore Persistent Storage"),
+                                  ListItem::new("Restore Contract Instance"),
+                                  ListItem::new("Restore Contract Code Hash"),
+                                  ListItem::new("Restore Instance Storage"),
+                ], "Restore Archived Data Scripts")
             }
             Tab3 => {
-                List::new(["item1", "item2"])
-                    .highlight_style(Style::default())
-                    .highlight_symbol(">")
-                    .highlight_spacing(HighlightSpacing::Always)
-                    .block(Block::bordered())
+                list_factory(vec![ListItem::new("Set Persistent Data"),
+                                  ListItem::new("Set Instance Data"),
+                                  ListItem::new("Extend Persistent TTL"),
+                                  ListItem::new("Extend Instance TTL"),
+                ], "Contract Invocation Scripts")
             }
             Tab4 => {
-                List::new(["item1", "item2"])
-                    .highlight_style(Style::default())
-                    .highlight_symbol(">")
-                    .highlight_spacing(HighlightSpacing::Always)
-                    .block(Block::bordered())
+                list_factory(vec![ListItem::new("Show Contract Data"),
+                                  ListItem::new("Show Invocations"),
+                                  ListItem::new("Show Storage TTLs"),
+                                  ListItem::new("Show Misc data"),
+                ], "Display Contract Info Scripts")
             }
         },
-        bot_area, &mut ListStates::select(app.selected_tab, &mut app.list_states),
+        bot_left, &mut ListStates::select(app.selected_tab, &mut app.list_states),
     );
+
+
+    frame.render_widget(Paragraph::new(Text::to_owned(&app.cmd_output_state.cmd_output).clone())
+                            .block(
+                                Block::bordered()
+                                    .title("Command Output")
+                                    .title_alignment(Alignment::Center)
+                                    .title_style(Style::default().add_modifier(Modifier::BOLD))
+                                    .border_type(BorderType::Rounded),
+                            )
+                            .style(Style::default().fg(Color::Yellow).bg(Color::Black))
+                            .centered(), bot_right);
 }
+
+fn list_factory<'a>(list_items: Vec<ListItem<'a>>, title: &'a str) -> List<'a> {
+    List::new(
+        list_items
+    ).bg(Color::Black)
+     .highlight_style(
+         Style::default()
+             .bg(Color::Yellow)
+             .add_modifier(Modifier::BOLD).add_modifier(Modifier::UNDERLINED))
+     .highlight_symbol(" ❯❯ ")
+     .highlight_spacing(HighlightSpacing::Always)
+     .block(Block::bordered()
+         .title(title)
+         .title_style(Style::default().add_modifier(Modifier::BOLD)))
+}
+

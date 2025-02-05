@@ -2,17 +2,20 @@ use std::collections::linked_list;
 use std::error;
 use std::fmt::{Debug, Formatter};
 use std::ptr::{addr_of_mut, copy_nonoverlapping};
+use std::string::String;
 
+use crossterm::event::{KeyCode, KeyEvent};
 use futures::StreamExt;
 use ratatui::buffer::Buffer;
+use ratatui::layout::{Offset, Rect};
 use ratatui::layout::Alignment::Center;
-use ratatui::layout::Rect;
 use ratatui::style::{Style, Stylize};
 use ratatui::style::palette::tailwind;
 use ratatui::symbols;
-use ratatui::text::Line;
+use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, Padding, Paragraph, Widget};
 pub(crate) use ratatui::widgets::ListState;
+use serde::Serialize;
 use strum::{Display, EnumIter, FromRepr};
 
 use crate::app::SelectedTab::{Tab1, Tab2, Tab3, Tab4};
@@ -45,9 +48,23 @@ impl ListStates {
         Self { list_state, list_state2, list_state3, list_state4, func }
     }
 }
+
+/// A new-type representing a string field with a label.
+#[derive(Debug, Default)]
+pub struct CmdOutputState<'a> {
+    pub cmd_output: Text<'a>,
+    pub cmd_output_state: Box<ListState>,
+}
+
+impl CmdOutputState<'static> {
+    pub fn new<'a>(cmd_output: Text<'static>, cmd_output_state: Box<ListState>) -> Self {
+        Self { cmd_output, cmd_output_state }
+    }
+}
+
 /// Application.
 
-pub struct App {
+pub struct App<'a> {
     /// Is the application running?
     pub running: bool,
 
@@ -56,6 +73,8 @@ pub struct App {
     pub selected_tab: SelectedTab,
 
     pub list_states: Box<ListStates>,
+
+    pub cmd_output_state: CmdOutputState<'a>,
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
@@ -116,15 +135,15 @@ impl SelectedTab {
 
     pub const fn palette(self) -> tailwind::Palette {
         match self {
-            Tab1 => tailwind::BLUE,
-            Tab2 => tailwind::EMERALD,
-            Tab3 => tailwind::INDIGO,
-            Tab4 => tailwind::RED,
+            Tab1 => tailwind::YELLOW,
+            Tab2 => tailwind::INDIGO,
+            Tab3 => tailwind::CYAN,
+            Tab4 => tailwind::GRAY,
         }
     }
 }
 
-impl Default for App {
+impl Default for App<'_> {
     fn default() -> Self {
         Self {
             running: true,
@@ -144,11 +163,15 @@ impl Default for App {
                                         Tab4 => { &mut list_states.list_state4 }
                                     }
                                 }))),
+            cmd_output_state: CmdOutputState::new(Text::raw(""),
+                                                  Box::new(ListState::default()
+                                                      .with_offset(0)
+                                                      .with_selected(Some(0)))),
         }
     }
 }
 
-impl App {
+impl App<'_> {
     /// Constructs a new instance of [`App`].
     pub fn new() -> Self {
         Self::default()
