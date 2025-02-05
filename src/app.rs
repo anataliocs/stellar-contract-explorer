@@ -2,8 +2,8 @@ use std::error;
 use std::fmt::Debug;
 
 use ratatui::style::palette::tailwind;
-use ratatui::style::{ Stylize};
-use ratatui::text::{Line, Text};
+use ratatui::style::{Modifier, Style, Stylize};
+use ratatui::text::{Line, Text, ToText};
 pub(crate) use ratatui::widgets::ListState;
 use strum::{Display, EnumIter, FromRepr};
 
@@ -53,14 +53,17 @@ impl ListStates {
 /// A new-type representing a string field with a label.
 #[derive(Debug, Default)]
 pub struct CmdOutputState<'a> {
-    pub cmd_output: Text<'a>,
+    pub cmd_output: Box<Text<'a>>,
+    pub network_status: Box<Text<'a>>,
     pub cmd_output_state: Box<ListState>,
 }
 
 impl CmdOutputState<'static> {
-    pub fn new<'a>(cmd_output: Text<'static>, cmd_output_state: Box<ListState>) -> Self {
+    pub fn new<'a>(cmd_output: Box<Text<'static>>, cmd_output_state: Box<ListState>) -> Self {
         Self {
             cmd_output,
+            network_status: Box::new(Text::raw("Not Connected")
+                    .style(Style::default().add_modifier(Modifier::DIM))),
             cmd_output_state,
         }
     }
@@ -155,7 +158,7 @@ impl Default for App<'_> {
                 }),
             )),
             cmd_output_state: CmdOutputState::new(
-                Text::raw(""),
+                Box::new(Text::raw("")),
                 Box::new(ListState::default().with_offset(0).with_selected(Some(0))),
             ),
         }

@@ -1,23 +1,41 @@
 use std::time::Duration;
 
-use xshell::Shell;
+use xshell::{cmd, Shell};
 
 use crate::commands::commands::{StellarCliCmd, StellarCliCmdName};
 
 pub mod commands {
-    use xshell::cmd;
-
-    use crate::commands::commands::StellarCliCmdName::VERSION;
-    use crate::commands::get_shell;
+    use std::time::Duration;
+    use xshell::{cmd, Shell};
+    use StellarCliCmdName::{Env, NetworkToggle};
+    use crate::commands::commands::StellarCliCmdName::{ReadContractDataWasm, Version};
 
     pub enum StellarCliCmdName {
-        VERSION,
+        Version,
+        Env,
+        ReadContractDataWasm,
+        NetworkToggle
     }
 
     impl StellarCliCmdName {
-        pub fn get_cmd(&self) -> StellarCliCmd {
-            match &self {
-                VERSION => StellarCliCmd::new(VERSION, cmd!(get_shell(), "stellar --version")),
+        pub fn get_cmd(stellar_cli_cmd_name: &StellarCliCmdName) -> StellarCliCmd {
+            match stellar_cli_cmd_name {
+                Version => {
+                    let version = "--version";
+                    StellarCliCmd::new(Version, cmd!(get_shell(), "stellar {version}"))
+                },
+                Env => {
+                    let options = "--global";
+                    StellarCliCmd::new(Version, cmd!(get_shell(), "stellar env {options}"))
+                },
+                ReadContractDataWasm => {
+                    let options = "--output json --id CBQDHNBFBZYE4MKPWBSJOPIYLW4SFSXAXUTSXJN76GNKYVYPCKWC6QUK --wasm 26c495019afb7448f690a82d6e66d8fab1ad3fd3e7b4aec7d554209966c9d19d --durability persistent";
+                    StellarCliCmd::new(Version, cmd!(get_shell(), "stellar contract read {options}"))
+                }
+                NetworkToggle => {
+                    StellarCliCmd::new(Version, cmd!(get_shell(), "stellar network use local"))
+                }
+
             }
         }
     }
@@ -35,34 +53,26 @@ pub mod commands {
             }
         }
     }
+
+    pub fn execute(stellar_cli_cmd: StellarCliCmdName) -> String {
+        let cmd =  command_factory(&stellar_cli_cmd);
+
+
+        // Run the command with a timeout
+        cmd.cmd_slug
+           .timeout(Duration::from_secs(3))
+           .read()
+           .unwrap_or_else(|_e| {
+               "".parse().unwrap()
+           })
+    }
+
+    fn get_shell() -> Shell {
+        Shell::new().unwrap()
+    }
+
+    fn command_factory(stellar_cli_cmd: &StellarCliCmdName) -> StellarCliCmd {
+        StellarCliCmdName::get_cmd(stellar_cli_cmd)
+    }
 }
-pub fn execute(stellar_cli_cmd: StellarCliCmdName) -> String {
-    let cmd = match &stellar_cli_cmd {
-        StellarCliCmdName::VERSION => command_factory(&stellar_cli_cmd),
-    };
 
-    // Run the command with a timeout
-    cmd.cmd_slug
-       .timeout(Duration::from_secs(3))
-       .read()
-       .unwrap_or_else(|_e| {
-           "".parse().unwrap()
-       })
-}
-
-fn get_shell() -> Shell {
-    Shell::new().unwrap()
-}
-
-fn command_factory(stellar_cli_cmd: &StellarCliCmdName) -> StellarCliCmd {
-    let cmd_string = stellar_cli_cmd.get_cmd();
-    let cmd = cmd_string;
-
-    // Setup env
-    //cmd.env("key", "value");
-
-    // Setup args
-    //cmd.args()
-
-    cmd
-}

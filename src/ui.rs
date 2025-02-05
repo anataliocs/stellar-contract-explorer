@@ -1,13 +1,14 @@
 use ratatui::layout::{Constraint, Layout};
 use ratatui::prelude::{Modifier, Text};
 use ratatui::style::Stylize;
-use ratatui::widgets::{HighlightSpacing, List, ListItem, Tabs};
+use ratatui::widgets::{HighlightSpacing, List, ListItem, Padding, Tabs};
 use ratatui::{
     layout::Alignment,
     style::{Color, Style},
     widgets::{Block, BorderType, Paragraph},
     Frame,
 };
+use ratatui::text::{Span, ToText};
 use strum::IntoEnumIterator;
 
 use crate::app::SelectedTab::{Tab1, Tab2, Tab3, Tab4};
@@ -27,18 +28,36 @@ pub fn render<'a>(app: &'a mut App, frame: &mut Frame) {
     let [bot_left, bot_right] =
         Layout::horizontal([Constraint::Fill(2), Constraint::Fill(4)]).areas(bot_area);
 
+    let [top_left, top_right] =
+        Layout::horizontal([Constraint::Fill(3), Constraint::Fill(1)]).areas(tab_area);
+
+
     let titles = SelectedTab::iter().map(SelectedTab::title);
     let highlight_style = (Color::default(), app.selected_tab.palette().c950);
     let selected_tab_index = app.selected_tab as usize;
 
     frame.render_widget(
-        Tabs::new(titles)
+        Paragraph::new(app.cmd_output_state.network_status.to_text()).right_aligned()
+            .style(Style::default().add_modifier(Modifier::BOLD)
+            .bg(Color::DarkGray).fg(Color::Yellow))
+            .block(Block::bordered()
+                .border_type(BorderType::Rounded)
+                .padding(Padding::horizontal(2)
+                )),
+        top_right,
+    );
+
+    frame.render_widget(
+        Tabs::new(titles).style(Style::default().add_modifier(Modifier::BOLD))
             .highlight_style(highlight_style)
             .select(selected_tab_index)
             .padding(" ", " ")
             .divider(" ")
-            .block(Block::bordered().border_type(BorderType::Rounded)),
-        tab_area,
+            .block(Block::bordered().border_type(BorderType::Rounded)
+                .bg(Color::DarkGray)
+                .padding(Padding::horizontal(2))
+            ),
+        top_left,
     );
 
     frame.render_widget(
@@ -102,7 +121,7 @@ pub fn render<'a>(app: &'a mut App, frame: &mut Frame) {
     );
 
     frame.render_widget(
-        Paragraph::new(Text::to_owned(&app.cmd_output_state.cmd_output).clone())
+        Paragraph::new(Text::to_owned(&app.cmd_output_state.cmd_output.to_text()).clone())
             .block(
                 Block::bordered()
                     .title("Command Output")
@@ -129,6 +148,7 @@ fn list_factory<'a>(list_items: Vec<ListItem<'a>>, title: &'a str) -> List<'a> {
         .highlight_spacing(HighlightSpacing::Always)
         .block(
             Block::bordered()
+                .border_type(BorderType::Rounded).border_style(Style::default().fg(Color::Yellow))
                 .title(title)
                 .title_style(Style::default().add_modifier(Modifier::BOLD)),
         )
