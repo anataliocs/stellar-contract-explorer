@@ -1,101 +1,47 @@
-extern crate promkit;
-use std::any::Any;
-use std::char::REPLACEMENT_CHARACTER;
-use std::os::unix::process::CommandExt;
+use std::io;
 
-use promkit::crossterm::style::{Attribute, Attributes, Color, Stylize};
-use promkit::grapheme::StyledGraphemes;
-use promkit::preset::confirm::Confirm;
-use promkit::preset::json::Json;
-use promkit::preset::listbox::Listbox;
-use promkit::preset::readline::Readline;
-use promkit::Prompt;
-use promkit::style::StyleBuilder;
+use ratatui::{backend::CrosstermBackend, Terminal};
 
-use crate::json_util::json_string;
+use crate::{
+    app::{App, AppResult},
+    event::{Event, EventHandler},
+    handler::handle_key_events,
+    tui::Tui,
+};
 
-mod form_one;
-mod json_util;
-mod key_map;
+pub mod app;
+mod commands;
+pub mod event;
+pub mod handler;
+pub mod tui;
+pub mod ui;
 
-fn main() -> anyhow::Result<()> {
-    let base_prompt =
-        Confirm::new("This command line tool will walk through executing various scripts to perform Extend TTL and Restore Archived data commands")
-            .prompt()?.run();
+#[tokio::main]
+async fn main() -> AppResult<()> {
+    // Create an application.
+    let mut app = App::new();
 
-    let listbox = Listbox::new(Vec::from([
-        StyledGraphemes::from("Extend TTL"),
-        StyledGraphemes::from("Restore Archived Data"),
-    ]))
-    .title("Choose operation to perform")
-    .title_style(
-        StyleBuilder::new()
-            .attrs(Attributes::from(Attribute::Underlined).with(Attribute::Bold))
-            .build()
-            .stylize(),
-    )
-    .listbox_lines(3)
-    .prompt()
-    .unwrap()
-    .run();
+    // Initialize the terminal user interface.
+    let backend = CrosstermBackend::new(io::stdout());
+    let terminal = Terminal::new(backend)?;
+    let events = EventHandler::new(250);
+    let mut tui = Tui::new(terminal, events);
+    tui.init()?;
 
-    let listbox_two = Listbox::new(Vec::from([
-        StyledGraphemes::from("Extend instance TTL"),
-        StyledGraphemes::from("Extend persistence TTL"),
-    ]))
-    .title("Extend TTL for what time of Smart Contract Storage?")
-    .title_style(
-        StyleBuilder::new()
-            .attrs(Attributes::from(Attribute::Underlined).with(Attribute::Bold))
-            .build()
-            .stylize(),
-    )
-    .listbox_lines(3)
-    .prompt()
-    .unwrap()
-    .run();
+    // Start the main loop.
+    while app.running {
+        // Render the user interface.
+        tui.draw(&mut app)?;
+        // Handle events.
+        match tui.events.next().await? {
+            Event::Tick => app.tick(),
+            Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
+            Event::Mouse(_) => {}
+            Event::Resize(_, _) => {}
+        }
+    }
 
-    Readline::default()
-        .title("Enter Deployed CONTRACT_ID")
-        .prefix("Contract ID ❯❯ ")
-        .prefix_style(
-            StyleBuilder::new()
-                .attrs(Attributes::from(Attribute::Italic).with(Attribute::Bold))
-                .fgc(Color::Green)
-                .build()
-                .stylize(),
-        )
-        .prompt()
-        .unwrap()
-        .run()?;
-    Readline::default()
-        .title("Enter Secret Key for testnet")
-        .prefix("Secret Key ❯❯ ")
-        .mask(REPLACEMENT_CHARACTER)
-        .prompt()
-        .unwrap()
-        .run()?;
-    Readline::default()
-        .title("Enter Public Key for testnet")
-        .prefix("Public Key ❯❯ ")
-        .prompt()
-        .unwrap()
-        .run()?;
-
-    println!("\n❯❯ Initiating command...");
-    println!(
-        "Executing ❯❯ pnpx ts-node extendPersistentTtl.ts [CONTRACT_ID] [SOURCE_KEYPAIR] [PERSISTENT_STORAGE_KEY]"
-    );
-
-    Json::new(json_string())
-        .title("Evaluate JSON Response (ctrl+c to exit)")
-        .active_item_attribute(Attribute::Bold)
-        .inactive_item_attribute(Attribute::Dim)
-        .indent(4)
-        .json_lines(60)
-        .prompt()
-        .unwrap()
-        .run()?;
-
+    // Exit the user interface.
+    tui.exit()?;
     Ok(())
 }

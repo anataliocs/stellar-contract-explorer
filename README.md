@@ -31,10 +31,10 @@ Here's a `diff` if you use as reference if want to convert your own code to `asy
  [dependencies]
 -crossterm = "0.27.0"
 -ratatui = "0.24.0"
-+crossterm = { version = "0.27.0", features = ["event-stream"] }
++crossterm = { VERSION = "0.27.0", features = ["event-stream"] }
 +futures = "0.3.30"
 +ratatui = "0.25.0"
-+tokio = { version = "1.35.1", features = ["full"] }
++tokio = { VERSION = "1.35.1", features = ["full"] }
 ```
 
 **`./src/event.rs`**

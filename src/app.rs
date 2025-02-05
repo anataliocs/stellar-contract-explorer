@@ -1,28 +1,16 @@
-use std::collections::linked_list;
 use std::error;
-use std::fmt::{Debug, Formatter};
-use std::ptr::{addr_of_mut, copy_nonoverlapping};
-use std::string::String;
+use std::fmt::Debug;
 
-use crossterm::event::{KeyCode, KeyEvent};
-use futures::StreamExt;
-use ratatui::buffer::Buffer;
-use ratatui::layout::{Offset, Rect};
-use ratatui::layout::Alignment::Center;
-use ratatui::style::{Style, Stylize};
 use ratatui::style::palette::tailwind;
-use ratatui::symbols;
+use ratatui::style::{ Stylize};
 use ratatui::text::{Line, Text};
-use ratatui::widgets::{Block, Padding, Paragraph, Widget};
 pub(crate) use ratatui::widgets::ListState;
-use serde::Serialize;
 use strum::{Display, EnumIter, FromRepr};
 
 use crate::app::SelectedTab::{Tab1, Tab2, Tab3, Tab4};
 
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
-
 
 pub struct ListStates {
     pub list_state: ListState,
@@ -33,19 +21,32 @@ pub struct ListStates {
 }
 
 impl ListStates {
-    pub const fn select(selected_tab: SelectedTab, list_states: &mut Box<ListStates>) -> &mut ListState {
+    pub const fn select(
+        selected_tab: SelectedTab,
+        list_states: &mut Box<ListStates>,
+    ) -> &mut ListState {
         match selected_tab {
-            Tab1 => { &mut list_states.list_state }
-            Tab2 => { &mut list_states.list_state2 }
-            Tab3 => { &mut list_states.list_state3 }
-            Tab4 => { &mut list_states.list_state4 }
+            Tab1 => &mut list_states.list_state,
+            Tab2 => &mut list_states.list_state2,
+            Tab3 => &mut list_states.list_state3,
+            Tab4 => &mut list_states.list_state4,
         }
     }
 
-    pub fn new(list_state: ListState, list_state2: ListState,
-               list_state3: ListState, list_state4: ListState,
-               func: Box<dyn Fn(SelectedTab, &mut Box<ListStates>) -> &mut ListState>) -> Self {
-        Self { list_state, list_state2, list_state3, list_state4, func }
+    pub fn new(
+        list_state: ListState,
+        list_state2: ListState,
+        list_state3: ListState,
+        list_state4: ListState,
+        func: Box<dyn Fn(SelectedTab, &mut Box<ListStates>) -> &mut ListState>,
+    ) -> Self {
+        Self {
+            list_state,
+            list_state2,
+            list_state3,
+            list_state4,
+            func,
+        }
     }
 }
 
@@ -58,7 +59,10 @@ pub struct CmdOutputState<'a> {
 
 impl CmdOutputState<'static> {
     pub fn new<'a>(cmd_output: Text<'static>, cmd_output_state: Box<ListState>) -> Self {
-        Self { cmd_output, cmd_output_state }
+        Self {
+            cmd_output,
+            cmd_output_state,
+        }
     }
 }
 
@@ -78,7 +82,7 @@ pub struct App<'a> {
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
-enum AppState {
+pub enum AppState {
     #[default]
     Running,
     Quitting,
@@ -96,7 +100,6 @@ pub enum SelectedTab {
     #[strum(to_string = "Display Contract Info")]
     Tab4,
 }
-
 
 impl SelectedTab {
     /// Get the previous tab, if there is no previous tab return the current tab.
@@ -123,16 +126,6 @@ impl SelectedTab {
             .into()
     }
 
-    /// A block surrounding the tab's content
-    fn block(self) -> Block<'static> {
-        Block::bordered()
-            .title_alignment(Center)
-            .border_set(symbols::border::PROPORTIONAL_TALL)
-            .padding(Padding::horizontal(1))
-            .border_style(self.palette().c700)
-            .style(Style::default())
-    }
-
     pub const fn palette(self) -> tailwind::Palette {
         match self {
             Tab1 => tailwind::YELLOW,
@@ -149,24 +142,22 @@ impl Default for App<'_> {
             running: true,
             state: AppState::Running,
             selected_tab: Tab1,
-            list_states: Box::new(
-                ListStates::new(ListState::default().with_offset(0).with_selected(Some(0)),
-                                ListState::default().with_offset(0).with_selected(Some(0)),
-                                ListState::default().with_offset(0).with_selected(Some(0)),
-                                ListState::default().with_offset(0).with_selected(Some(0)),
-                                Box::new(|selected_tab, mut list_states|
-                                {
-                                    match selected_tab {
-                                        Tab1 => { &mut list_states.list_state }
-                                        Tab2 => { &mut list_states.list_state2 }
-                                        Tab3 => { &mut list_states.list_state3 }
-                                        Tab4 => { &mut list_states.list_state4 }
-                                    }
-                                }))),
-            cmd_output_state: CmdOutputState::new(Text::raw(""),
-                                                  Box::new(ListState::default()
-                                                      .with_offset(0)
-                                                      .with_selected(Some(0)))),
+            list_states: Box::new(ListStates::new(
+                ListState::default().with_offset(0).with_selected(Some(0)),
+                ListState::default().with_offset(0).with_selected(Some(0)),
+                ListState::default().with_offset(0).with_selected(Some(0)),
+                ListState::default().with_offset(0).with_selected(Some(0)),
+                Box::new(|selected_tab, list_states| match selected_tab {
+                    Tab1 => &mut list_states.list_state,
+                    Tab2 => &mut list_states.list_state2,
+                    Tab3 => &mut list_states.list_state3,
+                    Tab4 => &mut list_states.list_state4,
+                }),
+            )),
+            cmd_output_state: CmdOutputState::new(
+                Text::raw(""),
+                Box::new(ListState::default().with_offset(0).with_selected(Some(0))),
+            ),
         }
     }
 }
