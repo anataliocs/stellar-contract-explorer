@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use xshell::{cmd, Shell};
 
-use crate::commands::commands::{StellarCliCmd, StellarCliCmdName};
+use crate::commands::commands::{CmdResponse, StellarCliCmd, StellarCliCmdName};
 
 pub mod commands {
     use std::time::Duration;
@@ -53,18 +53,31 @@ pub mod commands {
             }
         }
     }
+    
+    pub struct CmdResponse {
+        pub raw_cmd: xshell::Cmd,
+        pub result: String
+    }
 
-    pub fn execute(stellar_cli_cmd: StellarCliCmdName) -> String {
+    impl CmdResponse {
+        pub fn new(raw_cmd: xshell::Cmd, result: String) -> Self {
+            Self { raw_cmd, result }
+        }
+    }
+
+    pub fn execute(stellar_cli_cmd: StellarCliCmdName) -> CmdResponse {
         let cmd =  command_factory(&stellar_cli_cmd);
 
 
         // Run the command with a timeout
-        cmd.cmd_slug
-           .timeout(Duration::from_secs(3))
-           .read()
-           .unwrap_or_else(|_e| {
-               "".parse().unwrap()
-           })
+        let res = cmd.cmd_slug.clone()
+                        .timeout(Duration::from_secs(3))
+                        .read()
+                        .unwrap_or_else(|_e| {
+                            "".parse().unwrap()
+                        });
+
+        CmdResponse::new(cmd.cmd_slug, res)
     }
 
     fn get_shell() -> Shell {

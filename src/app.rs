@@ -5,9 +5,11 @@ use ratatui::style::palette::tailwind;
 use ratatui::style::{Modifier, Style, Stylize};
 use ratatui::text::{Line, Text, ToText};
 pub(crate) use ratatui::widgets::ListState;
+use ratatui::widgets::ScrollbarState;
 use strum::{Display, EnumIter, FromRepr};
 
 use crate::app::SelectedTab::{Tab1, Tab2, Tab3, Tab4};
+use crate::ui::layout::CmdOutputScrollbar;
 
 /// Application result type.
 pub type AppResult<T> = std::result::Result<T, Box<dyn error::Error>>;
@@ -21,15 +23,15 @@ pub struct ListStates {
 }
 
 impl ListStates {
-    pub const fn select(
+    pub fn select(
         selected_tab: SelectedTab,
         list_states: &mut Box<ListStates>,
-    ) -> &mut ListState {
+    ) -> ListState {
         match selected_tab {
-            Tab1 => &mut list_states.list_state,
-            Tab2 => &mut list_states.list_state2,
-            Tab3 => &mut list_states.list_state3,
-            Tab4 => &mut list_states.list_state4,
+            Tab1 => list_states.list_state.clone(),
+            Tab2 => list_states.list_state2.clone(),
+            Tab3 => list_states.list_state3.clone(),
+            Tab4 => list_states.list_state4.clone(),
         }
     }
 
@@ -56,6 +58,7 @@ pub struct CmdOutputState<'a> {
     pub cmd_output: Box<Text<'a>>,
     pub network_status: Box<Text<'a>>,
     pub cmd_output_state: Box<ListState>,
+    pub cmd_output_scrollbar: Box<ScrollbarState>
 }
 
 impl CmdOutputState<'static> {
@@ -65,6 +68,7 @@ impl CmdOutputState<'static> {
             network_status: Box::new(Text::raw("Not Connected")
                     .style(Style::default().add_modifier(Modifier::DIM))),
             cmd_output_state,
+            cmd_output_scrollbar: Box::new(ScrollbarState::new(100)),
         }
     }
 }
