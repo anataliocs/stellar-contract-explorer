@@ -18,7 +18,7 @@ pub(crate) mod layout {
     use strum::IntoEnumIterator;
 
     use crate::app;
-    use crate::app::{App, ListStates, SelectedTab};
+    use crate::app::{App, ListStates, SelectedTab, ListState};
     use crate::app::SelectedTab::{Tab1, Tab2, Tab3, Tab4};
 
     /// Renders the user interface widgets.
@@ -127,11 +127,28 @@ pub(crate) mod layout {
                 ),
             },
             bot_left,
-            &mut ListStates::select(app.selected_tab, &mut app.list_states),
+            match selected_tab_index {
+                0 =>{
+                    &mut app.list_states.list_state
+                },
+                1 =>{
+                    &mut app.list_states.list_state2
+                },
+                2 =>{
+                    &mut app.list_states.list_state3
+                },
+                3 =>{
+                    &mut app.list_states.list_state4
+                }
+                _ => {
+                    &mut app.list_states.list_state
+                }
+            }
+
         );
 
         frame.render_widget(
-            Paragraph::new(Text::to_owned(&app.cmd_output_state.cmd_output.to_text()).clone())
+            Paragraph::new(Text::to_owned(&app.cmd_output_state.cmd_output.to_text()))
                 .left_aligned()
                 .scroll((0, 0))
                 .wrap(Wrap::default())

@@ -33,10 +33,10 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
             app.previous_tab();
         }
         KeyCode::Up => {
-            ListStates::select(app.selected_tab, &mut app.list_states).select_previous();
+            ListStates::select_prev(app.selected_tab, &mut app.list_states);
         }
         KeyCode::Down => {
-            ListStates::select(app.selected_tab, &mut app.list_states).select_next();
+            ListStates::select_next(app.selected_tab, &mut app.list_states);
         }
 
         KeyCode::Tab => {
@@ -68,13 +68,6 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
                             .alignment(Alignment::Left));
                 }
             }
-
-            app.cmd_output_state.cmd_output.push_line(Line::raw(
-                ListStates::select(app.selected_tab, &mut app.list_states)
-                    .selected()
-                    .unwrap()
-                    .to_string(),
-            ));
 
             app.cmd_output_state
                .cmd_output

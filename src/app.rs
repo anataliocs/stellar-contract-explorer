@@ -23,15 +23,27 @@ pub struct ListStates {
 }
 
 impl ListStates {
-    pub fn select(
+    pub fn select_next(
         selected_tab: SelectedTab,
         list_states: &mut Box<ListStates>,
-    ) -> ListState {
+    ) {
         match selected_tab {
-            Tab1 => list_states.list_state.clone(),
-            Tab2 => list_states.list_state2.clone(),
-            Tab3 => list_states.list_state3.clone(),
-            Tab4 => list_states.list_state4.clone(),
+            Tab1 => ListState::select_next(&mut list_states.list_state),
+            Tab2 => ListState::select_next(&mut list_states.list_state2),
+            Tab3 => ListState::select_next(&mut list_states.list_state3),
+            Tab4 => ListState::select_next(&mut list_states.list_state4),
+        }
+    }
+
+    pub fn select_prev(
+        selected_tab: SelectedTab,
+        list_states: &mut Box<ListStates>,
+    ) {
+        match selected_tab {
+            Tab1 => ListState::select_previous(&mut list_states.list_state),
+            Tab2 => ListState::select_previous(&mut list_states.list_state2),
+            Tab3 => ListState::select_previous(&mut list_states.list_state3),
+            Tab4 => ListState::select_previous(&mut list_states.list_state4),
         }
     }
 
