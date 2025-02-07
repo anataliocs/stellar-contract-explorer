@@ -1,28 +1,26 @@
 use ratatui::style::{Styled, Stylize};
-use ratatui::symbols::scrollbar;
 use ratatui::text::ToText;
-use ratatui::widgets::{Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget};
+use ratatui::widgets::StatefulWidget;
 use strum::IntoEnumIterator;
-use crate::ui::layout::CmdOutputScrollbar;
 
 pub(crate) mod layout {
     use std::borrow::{Borrow, BorrowMut};
+
     use ratatui::buffer::Buffer;
     use ratatui::Frame;
     use ratatui::layout::{Alignment, Constraint, Layout, Rect};
     use ratatui::style::{Color, Modifier, Style, Styled, Stylize};
     use ratatui::symbols::scrollbar;
-    use ratatui::text::{Text, ToText};
+    use ratatui::text::Text;
     use ratatui::widgets::{Block, BorderType, HighlightSpacing, List, ListItem, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Tabs, Wrap};
-    use serde::__private::de::Borrowed;
     use strum::IntoEnumIterator;
 
     use crate::app;
-    use crate::app::{App, ListStates, SelectedTab, ListState};
+    use crate::app::{App, SelectedTab};
     use crate::app::SelectedTab::{Tab1, Tab2, Tab3, Tab4};
 
     /// Renders the user interface widgets.
-    pub fn render<'a>(app: &'a mut App, frame: &mut Frame) {
+    pub fn render<'a>(app: &'a mut App, frame: &mut Frame, event1: String) {
         // This is where you add new widgets.
         // See the following resources:
         // - https://docs.rs/ratatui/latest/ratatui/widgets/index.html
@@ -45,8 +43,9 @@ pub(crate) mod layout {
         let highlight_style = (Color::default(), app.selected_tab.palette().c950);
         let selected_tab_index = app.selected_tab as usize;
 
+
         frame.render_widget(
-            Paragraph::new(app.cmd_output_state.network_status.to_text())
+            Paragraph::new(Text::raw(event1.to_string()))
                 .right_aligned()
                 .style(Style::default().add_modifier(Modifier::BOLD)
                                        .bg(Color::DarkGray).fg(Color::Yellow))
@@ -56,6 +55,7 @@ pub(crate) mod layout {
                     )),
             top_right,
         );
+
 
         frame.render_widget(
             Tabs::new(titles).style(Style::default().add_modifier(Modifier::BOLD))
@@ -128,27 +128,26 @@ pub(crate) mod layout {
             },
             bot_left,
             match selected_tab_index {
-                0 =>{
+                0 => {
                     &mut app.list_states.list_state
-                },
-                1 =>{
+                }
+                1 => {
                     &mut app.list_states.list_state2
-                },
-                2 =>{
+                }
+                2 => {
                     &mut app.list_states.list_state3
-                },
-                3 =>{
+                }
+                3 => {
                     &mut app.list_states.list_state4
                 }
                 _ => {
                     &mut app.list_states.list_state
                 }
-            }
-
+            },
         );
 
         frame.render_widget(
-            Paragraph::new(Text::to_owned(&app.cmd_output_state.cmd_output.to_text()))
+            Paragraph::new(Text::raw(event1))
                 .left_aligned()
                 .scroll((0, 0))
                 .wrap(Wrap::default())
@@ -189,11 +188,11 @@ pub(crate) mod layout {
 
     #[derive(Debug)]
     pub(crate) struct CmdOutputScrollbar {
-        scrollbar_state: ScrollbarState
+        scrollbar_state: ScrollbarState,
     }
 
     impl CmdOutputScrollbar {
-        pub fn scroll(mut self)  {
+        pub fn scroll(mut self) {
             &mut self.borrow_mut().scrollbar_state.next();
         }
 
@@ -228,7 +227,6 @@ pub(crate) mod layout {
         type State = (ScrollbarState);
 
         fn render(mut self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-
             self.borrow_mut().set_scrollbar_state(state.to_owned());
 
             Scrollbar::new(ScrollbarOrientation::VerticalRight)

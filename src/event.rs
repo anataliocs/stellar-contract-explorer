@@ -1,13 +1,21 @@
-use std::time::Duration;
+use std::cell::RefCell;
+use std::fmt::Display;
+use std::os::unix::raw::time_t;
+use std::ptr::addr_of_mut;
+use std::rc::Rc;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime};
 
 use crossterm::event::{Event as CrosstermEvent, KeyEvent, MouseEvent};
-use futures::{FutureExt, StreamExt};
+use futures::{FutureExt, pin_mut, SinkExt, StreamExt, TryFutureExt};
 use tokio::sync::mpsc;
+use tokio::time::Instant;
 
 use crate::app::AppResult;
+use crate::event::Event::Tick;
 
 /// Terminal events.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum Event {
     /// Terminal tick.
     Tick,
@@ -17,6 +25,18 @@ pub enum Event {
     Mouse(MouseEvent),
     /// Terminal resize.
     Resize(u16, u16),
+
+    UiUpdate(String),
+}
+
+impl Display for Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            Event::UiUpdate(string) => { String::from(string) }
+            _ => { String::from("") }
+        };
+        write!(f, "{}", str)
+    }
 }
 
 /// Terminal event handler.
@@ -71,7 +91,8 @@ impl EventHandler {
                       },
                     }
                   }
-                };
+                }
+                ;
             }
         });
         Self {
@@ -93,5 +114,14 @@ impl EventHandler {
                 std::io::ErrorKind::Other,
                 "This is an IO error",
             )))
+    }
+
+    pub fn send(&self, event: Event) -> AppResult<()> {
+        self.sender.send(Event::UiUpdate(
+            event.to_string()
+        )).map(|e| { e })
+            .unwrap_or_else(|e1| { e1; });
+
+        Ok(())
     }
 }

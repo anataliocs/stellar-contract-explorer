@@ -1,6 +1,9 @@
 use std::io;
-
+use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
+use futures::{StreamExt, TryFutureExt};
 use ratatui::{backend::CrosstermBackend, Terminal};
+use serde::ser::StdError;
 
 use crate::{
     app::{App, AppResult},
@@ -24,20 +27,30 @@ async fn main() -> AppResult<()> {
     // Initialize the terminal user interface.
     let backend = CrosstermBackend::new(io::stdout());
     let terminal = Terminal::new(backend)?;
-    let events = EventHandler::new(250);
-    let mut tui = Tui::new(terminal, events);
+    let events: &mut EventHandler = &mut EventHandler::new(250);
+    let mut tui = Tui::new(terminal);
+
     tui.init()?;
+
 
     // Start the main loop.
     while app.running {
-        // Render the user interface.
-        tui.draw(&mut app)?;
+
         // Handle events.
-        match tui.events.next().await? {
+        match events.next().await? {
             Event::Tick => app.tick(),
-            Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
+            Event::Key(key_event) => {
+                handle_key_events(&key_event, &mut app, Arc::new(events))
+                    .unwrap_or_else(|e| { AppResult::from(Result::<Event, Box<dyn StdError>>::Err(e)); });
+
+                // Render the user interface.
+                tui.draw(&mut app)?;
+            }
             Event::Mouse(_) => {}
             Event::Resize(_, _) => {}
+            Event::UiUpdate(string) => {
+                tui.draw_update(&mut app, string);
+            }
         }
     }
 

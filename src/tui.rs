@@ -7,7 +7,7 @@ use ratatui::backend::Backend;
 use ratatui::Terminal;
 
 use crate::app::{App, AppResult};
-use crate::event::EventHandler;
+use crate::event::Event;
 use crate::ui::layout::render;
 
 /// Representation of a terminal user interface.
@@ -18,14 +18,12 @@ use crate::ui::layout::render;
 pub struct Tui<B: Backend> {
     /// Interface to the Terminal.
     terminal: Terminal<B>,
-    /// Terminal event handler.
-    pub events: EventHandler,
 }
 
 impl<B: Backend> Tui<B> {
     /// Constructs a new instance of [`Tui`].
-    pub fn new(terminal: Terminal<B>, events: EventHandler) -> Self {
-        Self { terminal, events }
+    pub fn new(terminal: Terminal<B>) -> Self {
+        Self { terminal }
     }
 
     /// Initializes the terminal interface.
@@ -53,7 +51,12 @@ impl<B: Backend> Tui<B> {
     /// [`Draw`]: ratatui::Terminal::draw
     /// [`rendering`]: crate::ui::render
     pub fn draw(&mut self, app: &mut App) -> AppResult<()> {
-        self.terminal.draw(|frame| render(app, frame))?;
+        self.terminal.draw(|frame| render(app, frame, String::from("")))?;
+        Ok(())
+    }
+
+    pub fn draw_update(&mut self, app: &mut App, event: String) -> AppResult<()> {
+        self.terminal.draw(|frame| render(app, frame, event))?;
         Ok(())
     }
 

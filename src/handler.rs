@@ -1,19 +1,21 @@
-use std::ptr::from_mut;
+use std::ops::Deref;
+use std::sync::Arc;
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use futures::{SinkExt, TryFutureExt};
 use ratatui::layout::Alignment;
-use ratatui::text::{Line, ToLine, ToText};
-use ratatui::widgets::block::title;
+use ratatui::text::Line;
 use ratatui::widgets::ScrollDirection;
-use tokio::net::unix::uid_t;
-use xshell::Cmd;
+
 use StellarCliCmdName::{Env, ReadContractDataWasm, Version};
+
 use crate::app::{App, AppResult, ListStates};
 use crate::commands::commands::{CmdResponse, execute, StellarCliCmdName};
 use crate::commands::commands::StellarCliCmdName::NetworkToggle;
-use crate::ui::layout::CmdOutputScrollbar;
+use crate::event::{Event, EventHandler};
 
 /// Handles the key events and updates the state of [`App`].
-pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
+pub fn handle_key_events(key_event: &KeyEvent, app: &mut App, event_handler: Arc<&EventHandler>) -> AppResult<()> {
     match key_event.code {
         // Exit application on `ESC` or `q`
         KeyCode::Esc | KeyCode::Char('q') => {
@@ -40,7 +42,7 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
         }
 
         KeyCode::Tab => {
-                app.cmd_output_state.cmd_output_scrollbar.scroll(ScrollDirection::Forward);
+            app.cmd_output_state.cmd_output_scrollbar.scroll(ScrollDirection::Forward);
         }
 
         KeyCode::Delete => {
@@ -60,18 +62,12 @@ pub fn handle_key_events(key_event: KeyEvent, app: &mut App) -> AppResult<()> {
                 Env => {}
                 ReadContractDataWasm => {}
                 NetworkToggle => {
-                    app.cmd_output_state.network_status.lines.remove(0);
-                    app.cmd_output_state.network_status
-                        .push_line(Line::raw("Network: Local"));
-                    app.cmd_output_state.cmd_output
-                        .push_line(Line::raw("Local Network Connected")
-                            .alignment(Alignment::Left));
+                    &event_handler.as_ref()
+                        .send(Event::UiUpdate(String::from("Network: Local"))).unwrap_or_else(|e| { e; });
+                    &event_handler.as_ref()
+                        .send(Event::UiUpdate(String::from("Local Network Connected"))).unwrap_or_else(|e| { e; });
                 }
             }
-
-            app.cmd_output_state
-               .cmd_output
-               .push_line(Line::raw(app.selected_tab.title().to_string()));
         }
         // Other handlers you could add here.
         _ => {}
