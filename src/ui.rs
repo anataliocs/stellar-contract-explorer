@@ -18,9 +18,10 @@ pub(crate) mod layout {
     use crate::app;
     use crate::app::{App, SelectedTab};
     use crate::app::SelectedTab::{Tab1, Tab2, Tab3, Tab4};
+    use crate::event::{UiUpdateContent, UiUpdatePayload, UiWidget};
 
     /// Renders the user interface widgets.
-    pub fn render<'a>(app: &'a mut App, frame: &mut Frame, event1: String) {
+    pub fn render<'a>(app: &'a mut App, frame: &mut Frame, event1: UiUpdateContent) {
         // This is where you add new widgets.
         // See the following resources:
         // - https://docs.rs/ratatui/latest/ratatui/widgets/index.html
@@ -43,18 +44,16 @@ pub(crate) mod layout {
         let highlight_style = (Color::default(), app.selected_tab.palette().c950);
         let selected_tab_index = app.selected_tab as usize;
 
+        match event1.ui_widget() {
+            UiWidget::NoUpdate => {}
+            UiWidget::Tabs => {}
+            UiWidget::Network => {}
+            UiWidget::ListSelect => {}
+            UiWidget::CmdOutput => {}
+            UiWidget::Scrollbar => {}
+        }
 
-        frame.render_widget(
-            Paragraph::new(Text::raw(event1.to_string()))
-                .right_aligned()
-                .style(Style::default().add_modifier(Modifier::BOLD)
-                                       .bg(Color::DarkGray).fg(Color::Yellow))
-                .block(Block::bordered()
-                    .border_type(BorderType::Rounded)
-                    .padding(Padding::horizontal(2)
-                    )),
-            top_right,
-        );
+        render_network_widget(frame, &event1, top_right);
 
 
         frame.render_widget(
@@ -146,8 +145,15 @@ pub(crate) mod layout {
             },
         );
 
+        render_cmd_output_window(frame, event1, bot_right_console);
+
+        CmdOutputScrollbar::default()
+            .render(bot_right_scroll, frame.buffer_mut(), &mut app.cmd_output_state.cmd_output_scrollbar);
+    }
+
+    fn render_cmd_output_window(frame: &mut Frame, event1: UiUpdateContent, bot_right_console: Rect) {
         frame.render_widget(
-            Paragraph::new(Text::raw(event1))
+            Paragraph::new(Text::raw(event1.ui_update_content()))
                 .left_aligned()
                 .scroll((0, 0))
                 .wrap(Wrap::default())
@@ -162,9 +168,20 @@ pub(crate) mod layout {
                 .left_aligned(),
             bot_right_console,
         );
+    }
 
-        CmdOutputScrollbar::default()
-            .render(bot_right_scroll, frame.buffer_mut(), &mut app.cmd_output_state.cmd_output_scrollbar);
+    fn render_network_widget(frame: &mut Frame, event1: &UiUpdateContent, top_right: Rect) {
+        frame.render_widget(
+            Paragraph::new(Text::raw(event1.ui_update_content().to_string()))
+                .right_aligned()
+                .style(Style::default().add_modifier(Modifier::BOLD)
+                                       .bg(Color::DarkGray).fg(Color::Yellow))
+                .block(Block::bordered()
+                    .border_type(BorderType::Rounded)
+                    .padding(Padding::horizontal(2)
+                    )),
+            top_right,
+        );
     }
 
     fn list_factory<'a>(list_items: Vec<ListItem<'a>>, title: &'a str) -> List<'a> {

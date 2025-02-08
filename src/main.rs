@@ -1,6 +1,7 @@
 use std::io;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+
 use futures::{StreamExt, TryFutureExt};
 use ratatui::{backend::CrosstermBackend, Terminal};
 use serde::ser::StdError;
@@ -30,6 +31,9 @@ async fn main() -> AppResult<()> {
     let events: &mut EventHandler = &mut EventHandler::new(250);
     let mut tui = Tui::new(terminal);
 
+    /*    let (broadcast_sender, broadcast_receiver) =
+            tokio::sync::broadcast::channel(100);*/
+
     tui.init()?;
 
 
@@ -38,6 +42,9 @@ async fn main() -> AppResult<()> {
 
         // Handle events.
         match events.next().await? {
+            Event::UiUpdate(content) => {
+                tui.draw_update(&mut app, content);
+            }
             Event::Tick => app.tick(),
             Event::Key(key_event) => {
                 handle_key_events(&key_event, &mut app, Arc::new(events))
@@ -48,9 +55,6 @@ async fn main() -> AppResult<()> {
             }
             Event::Mouse(_) => {}
             Event::Resize(_, _) => {}
-            Event::UiUpdate(string) => {
-                tui.draw_update(&mut app, string);
-            }
         }
     }
 

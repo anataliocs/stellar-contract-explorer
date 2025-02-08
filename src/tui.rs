@@ -7,7 +7,7 @@ use ratatui::backend::Backend;
 use ratatui::Terminal;
 
 use crate::app::{App, AppResult};
-use crate::event::Event;
+use crate::event::UiUpdateContent;
 use crate::ui::layout::render;
 
 /// Representation of a terminal user interface.
@@ -51,11 +51,11 @@ impl<B: Backend> Tui<B> {
     /// [`Draw`]: ratatui::Terminal::draw
     /// [`rendering`]: crate::ui::render
     pub fn draw(&mut self, app: &mut App) -> AppResult<()> {
-        self.terminal.draw(|frame| render(app, frame, String::from("")))?;
+        self.terminal.draw(|frame| render(app, frame, UiUpdateContent::default()))?;
         Ok(())
     }
 
-    pub fn draw_update(&mut self, app: &mut App, event: String) -> AppResult<()> {
+    pub fn draw_update(&mut self, app: &mut App, event: UiUpdateContent) -> AppResult<()> {
         self.terminal.draw(|frame| render(app, frame, event))?;
         Ok(())
     }

@@ -9,6 +9,7 @@ use std::time::{Duration, SystemTime};
 use crossterm::event::{Event as CrosstermEvent, KeyEvent, MouseEvent};
 use futures::{FutureExt, pin_mut, SinkExt, StreamExt, TryFutureExt};
 use tokio::sync::mpsc;
+use tokio::time::error::Elapsed;
 use tokio::time::Instant;
 
 use crate::app::AppResult;
@@ -26,17 +27,48 @@ pub enum Event {
     /// Terminal resize.
     Resize(u16, u16),
 
-    UiUpdate(String),
+    UiUpdate(UiUpdateContent),
 }
 
-impl Display for Event {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let str = match self {
-            Event::UiUpdate(string) => { String::from(string) }
-            _ => { String::from("") }
-        };
-        write!(f, "{}", str)
+#[derive(Clone, Debug, Default)]
+pub enum UiWidget {
+    #[default]
+    NoUpdate,
+    Tabs,
+    Network,
+    ListSelect,
+    CmdOutput,
+    Scrollbar,
+}
+#[derive(Clone, Debug, Default)]
+pub struct UiUpdateContent {
+    ui_widget: UiWidget,
+    ui_key: String,
+    ui_update_content: String,
+}
+
+impl UiUpdateContent {
+    pub fn new(ui_widget: UiWidget, ui_key: String, ui_update_content: String) -> Self {
+        Self { ui_widget, ui_key, ui_update_content }
     }
+}
+
+impl UiUpdatePayload for UiUpdateContent {
+    fn ui_widget(&self) -> &UiWidget {
+        &self.ui_widget
+    }
+    fn ui_key(&self) -> &str {
+        &self.ui_key
+    }
+    fn ui_update_content(&self) -> &str {
+        &self.ui_update_content
+    }
+}
+
+pub trait UiUpdatePayload {
+    fn ui_widget(&self) -> &UiWidget;
+    fn ui_key(&self) -> &str;
+    fn ui_update_content(&self) -> &str;
 }
 
 /// Terminal event handler.
@@ -117,9 +149,7 @@ impl EventHandler {
     }
 
     pub fn send(&self, event: Event) -> AppResult<()> {
-        self.sender.send(Event::UiUpdate(
-            event.to_string()
-        )).map(|e| { e })
+        self.sender.send(event).map(|e| { e })
             .unwrap_or_else(|e1| { e1; });
 
         Ok(())
